@@ -1,0 +1,204 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    16:33:01 12/04/2019 
+// Design Name: 
+// Module Name:    traffic_light_syst 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module traffic_light_sys #( 
+parameter NBITS = 32 
+) ( input wire button , 
+input wire clk , 
+output reg a , // LED segments 
+output reg b , 
+output reg c , 
+output reg d , 
+output reg e , 
+output reg f , 
+output reg g , 
+output reg an0, // LED display control 
+output reg an1, 
+output reg an2, 
+output reg an3 
+); 
+reg reset; 
+reg reset2; 
+wire timer; 
+wire timer2; 
+reg [2:0] current_state ; 
+reg [2:0] next_state ; 
+wire [NBITS-1:0] cnt_ini ; 
+wire [NBITS-1:0] cnt_rst ; 
+wire [NBITS-1:0] cnt_ini2 ; 
+wire [NBITS-1:0] cnt_rst2 ; 
+// -------------------------------------- 
+// Sequential logic 
+// -------------------------------------- 
+always @(posedge clk) begin 
+current_state = next_state ; 
+end 
+// -------------------------------------- 
+// Comb. Logic 
+// -------------------------------------- 
+assign cnt_ini = 32'h0000 ; 
+assign cnt_rst = 125000000; // 5 secs ( 25 MHZ internal clock ) 
+assign cnt_ini2 = 32'h0000 ; 
+assign cnt_rst2 = 75000000; // 3 secs ( 25 MHZ internal clock ) 
+// -------------------------------------- 
+// Comb. Logic - FSM 
+// -------------------------------------- 
+localparam OFF = 3'b000 ; 
+localparam START = 3'b001 ; 
+localparam ON = 3'b010 ; 
+localparam OFF2 = 3'b011 ; 
+localparam OFFt = 3'b100 ; 
+localparam OFF2t = 3'b101 ; 
+always @( current_state ) begin 
+case (current_state) 
+OFF : begin 
+// Setting the ANs signals 
+an0 = 1'b1; 
+an1 = 1'b1; 
+an2 = 1'b1; 
+an3 = 1'b0; // Display in the module AN3 
+// Setting the segments signals 
+a = 1'b1 ; 
+b = 1'b1 ; 
+c = 1'b1 ; 
+d = 1'b1 ; 
+e = 1'b1 ; 
+f = 1'b1 ; 
+g = 1'b1 ; 
+a = 1'b0 ; 
+g = 1'b0 ; 
+reset = 1'b1; 
+reset2 = 1'b0; 
+//if ((button) && (timer2)) begin 
+if (button) begin 
+//reset2 = 1'b0; 
+next_state = OFFt; 
+end 
+else if (timer2) begin 
+next_state = OFF2; 
+reset2 = 1'b1; 
+end 
+else begin next_state = OFF; 
+end 
+end 
+OFFt : begin 
+a = 1'b0 ; 
+b = 1'b1 ; 
+f = 1'b1 ; 
+g = 1'b0 ; 
+reset = 1'b0; 
+reset2 = 1'b0; 
+if (timer2) begin 
+next_state = START; 
+//reset2 = 1'b1; 
+end 
+else begin 
+next_state = OFFt; 
+end 
+end 
+OFF2 : begin 
+// Setting the ANs signals 
+an0 = 1'b1; 
+an1 = 1'b1; 
+an2 = 1'b1; 
+an3 = 1'b0; // Display in the module AN3 
+// Setting the segments signals 
+a = 1'b1 ; 
+b = 1'b1 ; 
+c = 1'b1 ; 
+d = 1'b1 ; 
+e = 1'b1 ; 
+f = 1'b1 ; 
+g = 1'b1 ; 
+b = 1'b0 ; 
+f = 1'b0 ; 
+reset = 1'b1; 
+reset2 = 1'b0; 
+//if ((button) && (timer2)) begin 
+if (button) begin 
+//reset2 = 1'b0; 
+next_state = OFF2t; 
+end 
+else if (timer2) begin 
+next_state = OFF; 
+reset2 = 1'b1; 
+end 
+else begin next_state = OFF2; 
+end 
+end 
+OFF2t : begin 
+reset = 1'b0; 
+reset2 = 1'b0; 
+b = 1'b0 ; 
+a = 1'b1 ; 
+g = 1'b1 ; 
+f = 1'b0 ; 
+if (timer2) begin 
+next_state = START; 
+//reset2 = 1'b1; 
+end 
+else begin 
+next_state = OFF2t; 
+end 
+end 
+START : begin 
+//light = 1'b0; 
+reset = 1'b0; 
+reset2 = 1'b1; 
+next_state = ON; 
+end 
+ON : begin 
+//light = 1'b1; 
+a = 1'b0 ; 
+b = 1'b0 ; 
+f = 1'b0 ; 
+g = 1'b0 ; 
+if (timer) begin 
+next_state = OFF; 
+reset2 = 1'b1; 
+end 
+else begin 
+next_state = ON; 
+end 
+end 
+default : begin 
+reset = 1'b0; 
+reset2 = 1'b0; 
+next_state = OFF; 
+end 
+endcase 
+end 
+// -------------------------------------- 
+// Timer instantiation 
+// -------------------------------------- 
+timer_st #( .NBITS(NBITS) ) timerst ( 
+.timer(timer), 
+.clk(clk), 
+.reset(reset) , 
+.cnt_ini(cnt_ini) , 
+.cnt_rst(cnt_rst) 
+); timer_st #( .NBITS(NBITS) ) timerst2 ( 
+.timer(timer2), 
+.clk(clk), 
+.reset(reset2) , 
+.cnt_ini(cnt_ini2) , 
+.cnt_rst(cnt_rst2) 
+);
+ endmodule 
